@@ -1901,6 +1901,70 @@ html[lang="ar"] .contact-form__eyebrow { letter-spacing: 0; }
   .doctor-card__meta span { font-size: 9px; letter-spacing: .13em; }
   .doctor-card__halo { width: 132px; height: 132px; }
 
+  /* Compact first-visit language selector on phones. */
+  .language-modal {
+    padding: 12px;
+    align-items: center;
+  }
+
+  .language-modal__card {
+    width: min(100%, 430px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 19px 16px 17px;
+    border-radius: 22px;
+    overscroll-behavior: contain;
+  }
+
+  .language-modal__brand {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 10px;
+    border-radius: 13px;
+  }
+
+  .language-modal__card .eyebrow {
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .language-modal__card h2 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+    line-height: 1;
+    letter-spacing: -.045em;
+  }
+
+  .language-modal__card > p:not(.eyebrow) {
+    margin: 8px 0 14px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .language-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .language-choice {
+    min-height: 48px;
+    padding: 8px 9px;
+    gap: 7px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  .language-choice span:first-child {
+    font-size: 19px;
+  }
+
+  .language-choice small {
+    margin-top: 1px;
+    font-size: 9px;
+    line-height: 1.1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
