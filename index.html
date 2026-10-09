@@ -420,9 +420,9 @@
             <span class="contact-option__icon">✆</span>
             <span><small data-i18n="whatsappLabel">WhatsApp</small><strong data-i18n="whatsappText">Message a coordinator</strong></span>
           </a>
-          <a class="contact-option" href="mailto:info@uhturkey.com">
+          <a class="contact-option" href="mailto:info@uhturkey.com" data-routed-email-link>
             <span class="contact-option__icon">@</span>
-            <span><small data-i18n="emailLabel">Email</small><strong>info@uhturkey.com</strong></span>
+            <span><small data-i18n="emailLabel">Email</small><strong data-routed-email-text>info@uhturkey.com</strong></span>
           </a>
         </div>
       </div>
@@ -1357,36 +1357,142 @@
         }
       });
 
-      const whatsappByLanguage = {
-        de: '4915238565257',
-        tr: '905421626891',
-        nl: '31629168316',
-        es: '905421626891'
+      const coordinators = {
+        oussema: {
+          name: 'Oussema',
+          whatsapp: '4915238565257',
+          email: 'oussema@uhturkey.com'
+        },
+        anes: {
+          name: 'Anes',
+          whatsapp: '905822086301',
+          email: 'anes@uhturkey.com'
+        },
+        salim: {
+          name: 'Salim',
+          whatsapp: '31616507951',
+          email: 'salim@uhturkey.com'
+        },
+        sami: {
+          name: 'Sami',
+          whatsapp: '905446289401',
+          email: 'sami@uhturkey.com'
+        }
       };
 
-      const sharedWhatsAppPool = [
-        '4915238565257',
-        '905421626891',
-        '31629168316'
-      ];
+      const coordinatorPools = {
+        en: ['oussema', 'anes', 'salim', 'sami'],
+        tr: ['sami'],
+        de: ['oussema'],
+        fr: ['anes', 'oussema', 'sami'],
+        nl: ['salim'],
+        ar: ['oussema', 'anes', 'sami'],
+        es: ['anes'],
+        pl: ['sami'],
+        pt: ['sami']
+      };
 
-      function randomWhatsAppNumber() {
-        return sharedWhatsAppPool[Math.floor(Math.random() * sharedWhatsAppPool.length)];
+      const formOpeningMessages = {
+        en: 'Opening your email app…',
+        tr: 'E-posta uygulamanız açılıyor…',
+        de: 'E-Mail-App wird geöffnet…',
+        fr: 'Ouverture de votre messagerie…',
+        nl: 'Uw e-mailapp wordt geopend…',
+        ar: 'جارٍ فتح تطبيق البريد الإلكتروني…',
+        es: 'Abriendo tu aplicación de correo…',
+        pt: 'A abrir a sua aplicação de e-mail…',
+        pl: 'Otwieranie aplikacji pocztowej…'
+      };
+
+      function coordinatorForLanguage(code) {
+        const language = coordinatorPools[code] ? code : 'en';
+        const pool = coordinatorPools[language];
+        const storageKey = `uh-contact-coordinator-${language}`;
+        const stored = sessionStorage.getItem(storageKey);
+
+        if (stored && pool.includes(stored) && coordinators[stored]) {
+          return coordinators[stored];
+        }
+
+        const selectedKey = pool[Math.floor(Math.random() * pool.length)];
+        sessionStorage.setItem(storageKey, selectedKey);
+        return coordinators[selectedKey];
       }
 
-      function whatsappNumberForLanguage(code) {
-        return whatsappByLanguage[code] || randomWhatsAppNumber();
-      }
+      function refreshCoordinatorRouting() {
+        const coordinator = coordinatorForLanguage(activeLanguage);
 
-      document.querySelectorAll('[data-whatsapp-link]').forEach(link => {
-        link.href = `https://wa.me/${whatsappNumberForLanguage(activeLanguage)}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-
-        link.addEventListener('click', () => {
-          link.href = `https://wa.me/${whatsappNumberForLanguage(activeLanguage)}`;
+        document.querySelectorAll('[data-whatsapp-link]').forEach(link => {
+          link.href = `https://wa.me/${coordinator.whatsapp}`;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
         });
-      });
+
+        document.querySelectorAll('[data-routed-email-link]').forEach(link => {
+          link.href = `mailto:${coordinator.email}`;
+        });
+
+        document.querySelectorAll('[data-routed-email-text]').forEach(el => {
+          el.textContent = coordinator.email;
+        });
+
+        return coordinator;
+      }
+
+      refreshCoordinatorRouting();
+
+      const routedContactForm = document.getElementById('contactForm');
+      const routedFormStatus = document.getElementById('formStatus');
+
+      if (routedContactForm) {
+        routedContactForm.addEventListener('submit', event => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+
+          if (!routedContactForm.checkValidity()) {
+            routedContactForm.reportValidity();
+            return;
+          }
+
+          const coordinator = refreshCoordinatorRouting();
+          const data = new FormData(routedContactForm);
+
+          const name = String(data.get('name') || '').trim();
+          const email = String(data.get('email') || '').trim();
+          const phone = String(data.get('phone') || '').trim();
+          const country = String(data.get('country') || '').trim();
+          const treatment = String(data.get('treatment') || '').trim();
+          const packageRequested = data.get('full_package') === 'yes' ? 'Yes' : 'No';
+          const message = String(data.get('message') || '').trim();
+
+          const subject = `UH Turkey enquiry — ${treatment || 'General enquiry'} — ${name || 'Patient'}`;
+          const body = [
+            'New UH Turkey website enquiry',
+            '',
+            `Assigned coordinator: ${coordinator.name}`,
+            `Website language: ${activeLanguage.toUpperCase()}`,
+            '',
+            `Name: ${name}`,
+            `Email: ${email}`,
+            `WhatsApp / phone: ${phone}`,
+            `Country: ${country}`,
+            `Treatment: ${treatment}`,
+            `Full Istanbul package requested: ${packageRequested}`,
+            '',
+            'Message:',
+            message || '—',
+            '',
+            `Submitted from: ${window.location.href}`
+          ].join('\n');
+
+          if (routedFormStatus) {
+            routedFormStatus.textContent = formOpeningMessages[activeLanguage] || formOpeningMessages.en;
+          }
+
+          window.location.href =
+            `mailto:${coordinator.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }, true);
+      }
 
       const treatmentSelect = document.querySelector('select[name="treatment"]');
       const contactSection = document.getElementById('contact');
