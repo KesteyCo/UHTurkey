@@ -1360,21 +1360,25 @@
       const coordinators = {
         oussema: {
           name: 'Oussema',
+          route: 'OUSSEMA',
           whatsapp: '4915238565257',
           email: 'oussema@uhturkey.com'
         },
         anes: {
           name: 'Anes',
+          route: 'ANES',
           whatsapp: '905822086301',
           email: 'anes@uhturkey.com'
         },
         salim: {
           name: 'Salim',
+          route: 'SALIM',
           whatsapp: '31616507951',
           email: 'salim@uhturkey.com'
         },
         sami: {
           name: 'Sami',
+          route: 'SAMI',
           whatsapp: '905446289401',
           email: 'sami@uhturkey.com'
         }
@@ -1392,16 +1396,55 @@
         pt: ['sami']
       };
 
-      const formOpeningMessages = {
-        en: 'Opening your email app…',
-        tr: 'E-posta uygulamanız açılıyor…',
-        de: 'E-Mail-App wird geöffnet…',
-        fr: 'Ouverture de votre messagerie…',
-        nl: 'Uw e-mailapp wordt geopend…',
-        ar: 'جارٍ فتح تطبيق البريد الإلكتروني…',
-        es: 'Abriendo tu aplicación de correo…',
-        pt: 'A abrir a sua aplicação de e-mail…',
-        pl: 'Otwieranie aplikacji pocztowej…'
+      const WEB3FORMS_ACCESS_KEY = '7a0866f5-13df-4d66-b316-566134f4e629';
+      const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
+
+      const formStatusMessages = {
+        en: {
+          sending: 'Sending your enquiry…',
+          sent: 'Thank you. Your enquiry has been sent successfully.',
+          error: 'We could not send your enquiry. Please try again.'
+        },
+        tr: {
+          sending: 'Talebiniz gönderiliyor…',
+          sent: 'Teşekkürler. Talebiniz başarıyla gönderildi.',
+          error: 'Talebiniz gönderilemedi. Lütfen tekrar deneyin.'
+        },
+        de: {
+          sending: 'Ihre Anfrage wird gesendet…',
+          sent: 'Vielen Dank. Ihre Anfrage wurde erfolgreich gesendet.',
+          error: 'Ihre Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.'
+        },
+        fr: {
+          sending: 'Envoi de votre demande…',
+          sent: 'Merci. Votre demande a bien été envoyée.',
+          error: 'Votre demande n’a pas pu être envoyée. Veuillez réessayer.'
+        },
+        nl: {
+          sending: 'Uw aanvraag wordt verzonden…',
+          sent: 'Bedankt. Uw aanvraag is succesvol verzonden.',
+          error: 'Uw aanvraag kon niet worden verzonden. Probeer het opnieuw.'
+        },
+        ar: {
+          sending: 'جارٍ إرسال طلبك…',
+          sent: 'شكرًا لك. تم إرسال طلبك بنجاح.',
+          error: 'تعذر إرسال طلبك. يرجى المحاولة مرة أخرى.'
+        },
+        es: {
+          sending: 'Enviando tu solicitud…',
+          sent: 'Gracias. Tu solicitud se ha enviado correctamente.',
+          error: 'No se pudo enviar tu solicitud. Inténtalo de nuevo.'
+        },
+        pt: {
+          sending: 'A enviar o seu pedido…',
+          sent: 'Obrigado. O seu pedido foi enviado com sucesso.',
+          error: 'Não foi possível enviar o seu pedido. Tente novamente.'
+        },
+        pl: {
+          sending: 'Wysyłanie zapytania…',
+          sent: 'Dziękujemy. Twoje zapytanie zostało wysłane.',
+          error: 'Nie udało się wysłać zapytania. Spróbuj ponownie.'
+        }
       };
 
       function coordinatorForLanguage(code) {
@@ -1445,12 +1488,25 @@
       const routedFormStatus = document.getElementById('formStatus');
 
       if (routedContactForm) {
-        routedContactForm.addEventListener('submit', event => {
+        routedContactForm.addEventListener('submit', async event => {
           event.preventDefault();
           event.stopImmediatePropagation();
 
           if (!routedContactForm.checkValidity()) {
             routedContactForm.reportValidity();
+            return;
+          }
+
+          const messages = formStatusMessages[activeLanguage] || formStatusMessages.en;
+          const submitButton = routedContactForm.querySelector('button[type="submit"]');
+
+          if (
+            !WEB3FORMS_ACCESS_KEY ||
+            WEB3FORMS_ACCESS_KEY === 'PASTE_WEB3FORMS_ACCESS_KEY_HERE'
+          ) {
+            if (routedFormStatus) {
+              routedFormStatus.textContent = 'Web3Forms access key has not been added yet.';
+            }
             return;
           }
 
@@ -1465,10 +1521,14 @@
           const packageRequested = data.get('full_package') === 'yes' ? 'Yes' : 'No';
           const message = String(data.get('message') || '').trim();
 
-          const subject = `UH Turkey enquiry — ${treatment || 'General enquiry'} — ${name || 'Patient'}`;
-          const body = [
+          const routingTag = `[UH-ROUTE:${coordinator.route}]`;
+          const subject =
+            `${routingTag} UH Turkey enquiry — ${treatment || 'General enquiry'} — ${name || 'Patient'}`;
+
+          const emailBody = [
             'New UH Turkey website enquiry',
             '',
+            `Routing tag: ${routingTag}`,
             `Assigned coordinator: ${coordinator.name}`,
             `Website language: ${activeLanguage.toUpperCase()}`,
             '',
@@ -1485,12 +1545,66 @@
             `Submitted from: ${window.location.href}`
           ].join('\n');
 
+          const payload = new FormData();
+          payload.append('access_key', WEB3FORMS_ACCESS_KEY);
+          payload.append('subject', subject);
+          payload.append('from_name', 'UH Turkey Website');
+          payload.append('name', name);
+          payload.append('email', email);
+          payload.append('phone', phone);
+          payload.append('country', country);
+          payload.append('treatment', treatment);
+          payload.append('full_package', packageRequested);
+          payload.append('website_language', activeLanguage.toUpperCase());
+          payload.append('assigned_coordinator', coordinator.name);
+          payload.append('routing_tag', routingTag);
+          payload.append('message', emailBody);
+          payload.append('botcheck', '');
+
           if (routedFormStatus) {
-            routedFormStatus.textContent = formOpeningMessages[activeLanguage] || formOpeningMessages.en;
+            routedFormStatus.textContent = messages.sending;
           }
 
-          window.location.href =
-            `mailto:${coordinator.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.setAttribute('aria-busy', 'true');
+          }
+
+          try {
+            const response = await fetch(WEB3FORMS_ENDPOINT, {
+              method: 'POST',
+              body: payload,
+              headers: {
+                Accept: 'application/json'
+              }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+              throw new Error(result?.message || 'Form submission failed');
+            }
+
+            if (routedFormStatus) {
+              routedFormStatus.textContent = messages.sent;
+            }
+
+            routedContactForm.reset();
+
+            // Keep the same session coordinator after a successful submission.
+            refreshCoordinatorRouting();
+          } catch (error) {
+            console.error('UH Turkey contact form error:', error);
+
+            if (routedFormStatus) {
+              routedFormStatus.textContent = messages.error;
+            }
+          } finally {
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.removeAttribute('aria-busy');
+            }
+          }
         }, true);
       }
 
